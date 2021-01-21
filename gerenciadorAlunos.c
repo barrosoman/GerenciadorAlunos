@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #ifdef _WIN32
     #define clean "cls"
@@ -79,11 +80,11 @@ void importAllStudInfo(char *nomeArquivo);
 /* Funções auxiliares */
 int isNumber(char *buffer);
 int getTotalLines(char *nomeArquivo);
-void debug(int input, int input2);
+void debug(const char* str, ...);
 
 /* Funções para realloc de arrays */
 void incStudTotalNotas (int increment, studIndex iAluno);
-void increaseRegistrySize (int increment);
+void incRegistrySize (int increment);
 
 void analyzeImportData(FILE *fp, char *buffer, studIndex iAluno);
 
@@ -98,22 +99,27 @@ int main() {
 }
 
 
-void increaseRegistrySize(int increment) {
+/* Função que aumenta o array de estudantes, recebe um valor de incremento */
+void incRegistrySize(int increment) {
     reg.qtdStuds += increment;
 	reg.alunos = (Aluno_t *)realloc(reg.alunos,
 		(reg.qtdStuds) * sizeof(Aluno_t));
 }
 
 
+/* Função que realoca espaço para mais uma nota para um aluno
+   recebe um valor de incremento ao array e
+   um index de um aluno */
 void incStudTotalNotas(int increment, studIndex iAluno) {
     reg.alunos[iAluno].notas = (float *)realloc(reg.alunos[iAluno].notas,
             sizeof(float) * (reg.alunos[iAluno].totalNotas + increment));
 }
 
 
+/* Função que registra um aluno na database */
 void registerStudent() {
 	studIndex iAluno = reg.qtdStuds;
-	increaseRegistrySize (1);
+	incRegistrySize (1);
 
     editNome(iAluno);
     editSobrenome(iAluno);
@@ -121,6 +127,8 @@ void registerStudent() {
 }
 
 
+/* Função que printa as opções de cada menu,
+   recebe o número do menu */
 void printOptions(int menu) {
     switch (menu) {
         case ACOES_MENU:
@@ -144,6 +152,7 @@ void printOptions(int menu) {
 }
 
 
+/* Menu para seleção de uma ação */
 void menuActions() {
     char option;
     while (1) {
@@ -181,6 +190,7 @@ void menuActions() {
 }
 
 
+/* Menu para seleção de um aluno para edição */
 void menuEditStudent() {
     studIndex iAluno;
 
@@ -201,10 +211,12 @@ void menuEditStudent() {
 }
 
 
+/* Menu de edição de um estudante, recebe o index de um aluno */
 void editStudent(studIndex iAluno) {
     char choice;
 
-    printf("O que editar de %s %s?\n", reg.alunos[iAluno].nome, reg.alunos[iAluno].sobrenome);
+    printf("O que editar de %s %s?\n",
+            reg.alunos[iAluno].nome, reg.alunos[iAluno].sobrenome);
     while(1) {
         printOneStudInfo(iAluno);
         printOptions(EDIT_MENU);
@@ -232,6 +244,7 @@ void editStudent(studIndex iAluno) {
 
 
 /* Função para edição de notas */
+/* Recebe o index do aluno para a edição de suas notas */
 void editNotas(studIndex iAluno) {
     Aluno_t *currAluno = &reg.alunos[iAluno];
     int totalNotas;
@@ -250,7 +263,9 @@ void editNotas(studIndex iAluno) {
     system(clean);
 }
 
-/* Função genérica para edição de nomes */
+/* Função genérica para edição de nomes
+   Recebe uma string para o começo da frase e uma variavel para
+   inserir um valor */
 void editNomeGeneric(const char *prompt, char *field) {
     printf("%s do Aluno: ", prompt);
     scanf(" %[^\n]s", field);
@@ -268,7 +283,8 @@ void editSobrenome(studIndex iAluno) {
 }
 
 
-/* Imprime informação de um aluno */
+/* Imprime informação de um aluno
+   Recebe o index do aluno para a impressão de seus dados */
 void printOneStudInfo(studIndex iAluno) {
     printf("\n%d -\n", iAluno + 1);
     printf("\tNome: %s\n", reg.alunos[iAluno].nome);
@@ -325,7 +341,6 @@ void consolidarNotas() {
     }
 }
 
-
 /* Função usada para importar informações de um arquivo */
 void import() {
     char nomeArquivo[100];
@@ -338,16 +353,16 @@ void import() {
     importAllStudInfo(nomeArquivo);
 }
 
-
-/* Analisa os dados no arquivo para importar os dados
-   organizadamente */
+/* Aumenta o array de estudantes pelo número de linhas do arquivo
+   e analisa cada linha para atribuir corretamente os dados de cada
+   aluno, recebe o nome do arquivo para importação */
 void importAllStudInfo(char *nomeArquivo) {
     FILE *fp = fopen(nomeArquivo, "r");
     char buffer[200];
 
     int qtdStudsOld = reg.qtdStuds;
     int increment = getTotalLines(nomeArquivo);
-    increaseRegistrySize(increment);
+    incRegistrySize(increment);
 
     for (int i = qtdStudsOld; i < reg.qtdStuds; i++) {
         analyzeImportData(fp, buffer ,i);
@@ -355,6 +370,8 @@ void importAllStudInfo(char *nomeArquivo) {
     fclose(fp);
 }
 
+/* Analisa cada palavra de uma linha para atribuir a um dado de um aluno
+   Recebe o arquivo para importação, uma string (palavra) e um index de um aluno */
 void analyzeImportData(FILE *fp, char *buffer, studIndex iAluno) {
     int totalNotas = 0;
 
@@ -372,8 +389,6 @@ void analyzeImportData(FILE *fp, char *buffer, studIndex iAluno) {
         } else {
             /* Se for um número, é inserida a uma nota do aluno */
             incStudTotalNotas(1, iAluno);
-            reg.alunos[iAluno].notas = (float *)realloc(reg.alunos[iAluno].notas,
-                    sizeof(float) * (totalNotas+1));
             sscanf(buffer, "%f", &reg.alunos[iAluno].notas[totalNotas]);
             totalNotas++;
         }
@@ -399,6 +414,8 @@ int isNumber(char *buffer) {
 }
 
 
+/* Função base de exportação de dados, pergunta o nome do arquivo
+   para exportação dos dados */
 void saveData() {
     FILE *fp;
     char nomeArquivo[40];
@@ -409,6 +426,9 @@ void saveData() {
 }
 
 
+/* Escreve os dados de cada aluno linha por linha
+   na sequência "nome sobrenome1 sobrenome2 ... sobrenomeN nota1 nota2 ... notaN"
+   recebe um arquivo para exportação */
 void sendData(FILE *fp) {
     /* Passando por cada estudante no array, imprime seus dado a um arquivo
        arbitrário */
@@ -424,6 +444,7 @@ void sendData(FILE *fp) {
 }
 
 
+/* Função que conta quantas linhas um arquivo tem */
 int getTotalLines(char *nomeArquivo) {
     FILE *fp;
     int count = 0;
@@ -441,8 +462,13 @@ int getTotalLines(char *nomeArquivo) {
     return count;
 }
 
-void debug(int input, int input2) {
-    printf("\n\t[DEBUG] %d %d\n\n", input, input2);
-    getchar();
-    getchar();
+/* Função para debug */
+void debug(const char* str, ...) {
+    va_list args;
+    va_start(args, str);
+
+    printf("[DEBUG]: ");
+    vprintf(str, args);
+
+    va_end(args);
 }
