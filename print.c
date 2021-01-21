@@ -43,7 +43,7 @@ void consolidarNotas() {
 
         mediaNotas = mediaNotas/reg.alunos[i].totalNotas;
 
-        printf ("Aluno(a)%spassou com média %d.\n",
+        printf ("Aluno(a)%spassou com média %f.\n",
         	(mediaNotas >= 5) ? " " : " não ", mediaNotas);
     }
 }
